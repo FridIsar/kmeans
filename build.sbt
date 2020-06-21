@@ -1,4 +1,4 @@
-name := "smile-visualization"
+name := "kmeans-module"
 
 version := "0.1"
 

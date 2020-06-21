@@ -4,6 +4,8 @@ import smile.data.{Attribute, AttributeDataset, NominalAttribute, NumericAttribu
 import smile.plot.plot
 import smile.read
 
+import scala.collection.mutable.ListBuffer
+
 object Main {
   def moyenne(data : Array[Array[Double]], nbCar : Int) : Double = {
     var result : Double = 0
@@ -48,6 +50,33 @@ object Main {
     scala.math.sqrt(scala.math.pow((xB-xA),2)+scala.math.pow((yB-yA), 2));  //distance
   }
 
+  def kmeans(data : Array[Array[Double]], var1 : Int, var2 : Int) : Int = {
+    var randone = scala.util.Random.nextInt(150);
+    var randtwo = randone
+    while (randone == randtwo)  {
+      randtwo = scala.util.Random.nextInt(150);
+    }
+    var groupone = new ListBuffer[Int];
+    var grouptwo = new ListBuffer[Int];
+
+    var i = 0;
+    while (i < 150) {
+      var distone = distance(data,var1,var2,randone,i);
+      var disttwo = distance(data,var1,var2,randtwo,i);
+      if (distone > disttwo)  {
+        print(i + "est supérieur\n")
+        groupone.append(i)
+      }
+      else  {
+        print("l'inverse\n")
+        grouptwo.append(i);
+      }
+      i+=1
+    }
+    print("Listbuffers "+groupone+"\n deux "+grouptwo)
+  1
+  }
+
   def main(args: Array[String]): Unit = {
     val attributes = new Array[Attribute](4)
 
@@ -60,10 +89,9 @@ object Main {
 
     val dataFileUri = this.getClass.getClassLoader.getResource("iris.data").toURI.getPath
     val data: AttributeDataset = read.csv(dataFileUri, attributes = attributes, response = Some((label, 4)))
-
+    print(data.x().map(_.slice(0, 2)))
     val x2 = data.x().map(_.slice(0, 2))  // Takes first two columns
-
-    val window = plot(x2, data.labels(), Array('*', '+', 'o'), Array(Color.RED, Color.BLUE, Color.CYAN))
+    //val window = plot(x2, data.labels(), Array('*', '+', 'o'), Array(Color.RED, Color.BLUE, Color.CYAN)) //CREATION
     //setosa rouge, versicolor bleu, virginica cyan
 
     print("Moyenne : "+moyenne(x2, 0)) //0 slength 1 swidth 2 plength 3 pwidth
@@ -72,8 +100,10 @@ object Main {
     print(" Covariance : "+covariance(x2, 0, 1))
     print(" Coefficient de correlation : "+correlation(x2, 0, 1))
 
-    print(" Distance : "+distance(x2, 0,1,53,119))
+    kmeans(x2, 0, 1)
+
+    //print(" Distance : "+distance(x2, 0,1,53,119))
     //plot(data, '*', Array(Color.RED, Color.BLUE, Color.CYAN))
-    window.canvas.setAxisLabels(attributes.map(_.getName).slice(0, 2): _*)
+    //window.canvas.setAxisLabels(attributes.map(_.getName).slice(0, 2): _*) modif post creation
   }
 }
