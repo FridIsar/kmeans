@@ -42,15 +42,25 @@ object Main {
     covariance(data, x, y) / (ecartType(data,x)*ecartType(data,y))
   }
 
-  def distance(data : Array[Array[Double]], var1 : Int, var2 : Int, lineA : Int,  lineB : Int): Double =  {
-    var xA = data(lineA)(var1);
-    var yA = data(lineA)(var2);
-    var xB = data(lineB)(var1);
-    var yB = data(lineB)(var2);
+  def distance(xA : Double, yA : Double, xB : Double,  yB : Double): Double =  {
     scala.math.sqrt(scala.math.pow((xB-xA),2)+scala.math.pow((yB-yA), 2));  //distance
   }
 
+  def centrer(data : Array[Array[Double]], var1 : Int, var2 : Int, group : ListBuffer[Int]) : Array[Double] = {
+    var xTotal = 0.0;
+    var yTotal = 0.0;
+    var totalLength = group.length
+    for (i <- 0 to totalLength) {
+      xTotal += data(i)(var1);
+      yTotal += data(i)(var2);
+    }
+    Array(xTotal/totalLength, yTotal/totalLength);
+  }
+
   def kmeans(data : Array[Array[Double]], var1 : Int, var2 : Int) : Int = {
+    //initialisation
+    var totalTours = 0;
+    var hasChanged = true
     var randone = scala.util.Random.nextInt(150);
     var randtwo = randone
     while (randone == randtwo)  {
@@ -58,22 +68,34 @@ object Main {
     }
     var groupone = new ListBuffer[Int];
     var grouptwo = new ListBuffer[Int];
-
-    var i = 0;
-    while (i < 150) {
-      var distone = distance(data,var1,var2,randone,i);
-      var disttwo = distance(data,var1,var2,randtwo,i);
-      if (distone > disttwo)  {
-        print(i + "est supérieur\n")
-        groupone.append(i)
+    var prevcentreone = new Array[Double](2);
+    var prevcentretwo = new Array[Double](2);
+    var centreone = Array(data(randone)(var1),data(randone)(var2))  //coordonnées xy du centre
+    var centretwo = Array(data(randtwo)(var1),data(randtwo)(var2))
+    while (hasChanged)  {
+      totalTours +=1;
+      var i = 0;
+      while (i < 150) {
+        var distone = distance(centreone(0), centreone(1),data(i)(var1),data(i)(var2))
+        var disttwo = distance(centretwo(0), centretwo(1),data(i)(var1),data(i)(var2))
+        if (distone > disttwo)  {
+          groupone.append(i)
+        }
+        else  {
+          grouptwo.append(i);
+        }
+        i+=1
       }
-      else  {
-        print("l'inverse\n")
-        grouptwo.append(i);
+      centreone = centrer(data,var1,var2,groupone);
+      centretwo = centrer(data,var1,var2,grouptwo);
+      if (prevcentreone.equals(centreone) && prevcentretwo.equals(centretwo)) {
+        hasChanged = false;
       }
-      i+=1
+      prevcentreone = centreone.clone()
+      prevcentretwo = centretwo.clone()
+      groupone = new ListBuffer[Int];
+      grouptwo = new ListBuffer[Int];
     }
-    print("Listbuffers "+groupone+"\n deux "+grouptwo)
   1
   }
 
@@ -101,7 +123,7 @@ object Main {
     print(" Coefficient de correlation : "+correlation(x2, 0, 1))
 
     kmeans(x2, 0, 1)
-
+    print("\nend")
     //print(" Distance : "+distance(x2, 0,1,53,119))
     //plot(data, '*', Array(Color.RED, Color.BLUE, Color.CYAN))
     //window.canvas.setAxisLabels(attributes.map(_.getName).slice(0, 2): _*) modif post creation
