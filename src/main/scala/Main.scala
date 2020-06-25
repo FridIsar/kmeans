@@ -1,10 +1,11 @@
 import java.awt.Color
 
-import smile.data.{Attribute, AttributeDataset, NominalAttribute, NumericAttribute}
+import smile.data.{Attribute, NominalAttribute, NumericAttribute}
 import smile.plot.plot
-import smile.read
 
 import scala.collection.mutable.ListBuffer
+import scala.io.Source
+
 
 object Main {
   def moyenne(data : Array[Array[Double]], nbCar : Int) : Double = {
@@ -49,7 +50,7 @@ object Main {
   def centrer(data : Array[Array[Double]], var1 : Int, var2 : Int, group : ListBuffer[Int]) : Array[Double] = {
     var xTotal = 0.0;
     var yTotal = 0.0;
-    var totalLength = group.length
+    var totalLength = group.length-1 //MOINS 1?
     for (i <- 0 to totalLength) {
       xTotal += data(i)(var1);
       yTotal += data(i)(var2);
@@ -66,37 +67,91 @@ object Main {
     while (randone == randtwo)  {
       randtwo = scala.util.Random.nextInt(150);
     }
+    var randthree = randtwo
+    while (randthree == randtwo || randthree == randone)  {
+      randthree = scala.util.Random.nextInt(150);
+    }
     var groupone = new ListBuffer[Int];
     var grouptwo = new ListBuffer[Int];
+    var groupthree = new ListBuffer[Int];
     var prevcentreone = new Array[Double](2);
     var prevcentretwo = new Array[Double](2);
+    var prevcentrethree = new Array[Double](2);
     var centreone = Array(data(randone)(var1),data(randone)(var2))  //coordonnées xy du centre
     var centretwo = Array(data(randtwo)(var1),data(randtwo)(var2))
+    var centrethree = Array(data(randthree)(var1),data(randthree)(var2))
     while (hasChanged)  {
       totalTours +=1;
       var i = 0;
       while (i < 150) {
         var distone = distance(centreone(0), centreone(1),data(i)(var1),data(i)(var2))
         var disttwo = distance(centretwo(0), centretwo(1),data(i)(var1),data(i)(var2))
-        if (distone > disttwo)  {
-          groupone.append(i)
+        var distthree = distance(centrethree(0), centrethree(1),data(i)(var1),data(i)(var2))
+        if (distone < disttwo && distone < distthree)  {
+            groupone.append(i)
         }
         else  {
-          grouptwo.append(i);
+          if (disttwo < distone && disttwo < distthree)  {
+            grouptwo.append(i)
+          }
+          else  {
+            groupthree.append(i)
+          }
         }
         i+=1
       }
       centreone = centrer(data,var1,var2,groupone);
       centretwo = centrer(data,var1,var2,grouptwo);
-      if (prevcentreone.equals(centreone) && prevcentretwo.equals(centretwo)) {
+      centrethree = centrer(data,var1,var2,groupthree);
+      print("\nx1 "+centreone(0)+" y1 "+centreone(1)+"\nx2 "+centretwo(0)+" y2 "+
+        centretwo(1)+"\nx3 "+centrethree(0)+" y3 "+centrethree(1)+"\n")
+      Thread.sleep(1000)
+      if (prevcentreone(0) == centreone(0) && prevcentreone(1) == centreone(1) &&
+        prevcentretwo(0) == centretwo(0) && prevcentretwo(1) == centretwo(1) &&
+        prevcentrethree(0) == centrethree(0) && prevcentrethree(1) == centrethree(1)) {
         hasChanged = false;
       }
-      prevcentreone = centreone.clone()
-      prevcentretwo = centretwo.clone()
-      groupone = new ListBuffer[Int];
-      grouptwo = new ListBuffer[Int];
+      if (totalTours % 2 == 0) { //un tour sur 2 pour eviter la boucle infinie
+        prevcentreone = centreone.clone()
+        prevcentretwo = centretwo.clone()
+        prevcentrethree = centrethree.clone()
+      }
+      if(hasChanged)  {
+        groupone = new ListBuffer[Int];
+        grouptwo = new ListBuffer[Int];
+        groupthree = new ListBuffer[Int];
+      }
     }
-  1
+
+    var resultData = new Array[Array[Double]](153)
+    var resultChars = new Array[Int](153)
+    var k = 0;
+    for (i <- 0 to groupone.length-1) {
+      resultData(k) = Array(data(groupone(i))(var1),data(groupone(i))(var2))
+      resultChars(k) = 0;
+      k+=1;
+    }
+    for (i <- 0 to grouptwo.length-1) {
+      resultData(k) = Array(data(grouptwo(i))(var1),data(grouptwo(i))(var2))
+      resultChars(k) = 1;
+      k+=1;
+    }
+    for (i <- 0 to groupthree.length-1) {
+      resultData(k) = Array(data(groupthree(i))(var1),data(groupthree(i))(var2))
+      resultChars(k) = 2;
+      k+=1;
+    }
+    resultData(k) = centreone;
+    resultChars(k) = 3;
+    k+=1;
+    resultData(k) = centretwo;
+    resultChars(k) = 4;
+    k+=1;
+    resultData(k) = centrethree;
+    resultChars(k) = 5;
+    print("K IS "+k)
+    val window = plot(resultData, resultChars, Array('o', 'o', 'o', '*','*','*'), Array(Color.RED, Color.BLUE, Color.CYAN,Color.RED, Color.BLUE, Color.CYAN))
+    1
   }
 
   def main(args: Array[String]): Unit = {
@@ -110,22 +165,23 @@ object Main {
     val label = new NominalAttribute("class")
 
     val dataFileUri = this.getClass.getClassLoader.getResource("iris.data").toURI.getPath
-    val data: AttributeDataset = read.csv(dataFileUri, attributes = attributes, response = Some((label, 4)))
-    print(data.x().map(_.slice(0, 2)))
-    val x2 = data.x().map(_.slice(0, 2))  // Takes first two columns
-    //val window = plot(x2, data.labels(), Array('*', '+', 'o'), Array(Color.RED, Color.BLUE, Color.CYAN)) //CREATION
-    //setosa rouge, versicolor bleu, virginica cyan
+    val lines = Source.fromFile(dataFileUri).getLines.toArray;
+    var data : Array[Array[Double]] = Array.ofDim[Double](150, 4);
 
-    print("Moyenne : "+moyenne(x2, 0)) //0 slength 1 swidth 2 plength 3 pwidth
-    print(" Variance : "+variance(x2, 0))
-    print(" Ecart-type : "+ecartType(x2, 0))
-    print(" Covariance : "+covariance(x2, 0, 1))
-    print(" Coefficient de correlation : "+correlation(x2, 0, 1))
+    for (i <- 0 until lines.length-1) {
+      var lin = lines(i).split(",");
+      for (j <- 0 until 3)  {
+        data(i)(j) = lin(j).toDouble;
+      }
+    }
 
-    kmeans(x2, 0, 1)
-    print("\nend")
-    //print(" Distance : "+distance(x2, 0,1,53,119))
-    //plot(data, '*', Array(Color.RED, Color.BLUE, Color.CYAN))
-    //window.canvas.setAxisLabels(attributes.map(_.getName).slice(0, 2): _*) modif post creation
+    print("Moyenne : "+moyenne(data, 0)) //0 slength 1 swidth 2 plength 3 pwidth
+    print(" Variance : "+variance(data, 0))
+    print(" Ecart-type : "+ecartType(data, 0))
+    print(" Covariance : "+covariance(data, 0, 1))
+    print(" Coefficient de correlation : "+correlation(data, 1, 3))
+
+    kmeans(data, 0, 1)
+    print("\n end")
   }
 }
